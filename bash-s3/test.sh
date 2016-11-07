@@ -22,9 +22,9 @@ main() {
 	echo "Hi there, I was created at $(date -u -R)!" > "$temp_file"
 
 	echo "==> Create temp file and upload it"
-	#set -x
+	set -x
 	s3_upload "$temp_file" "$bucket" "$object" "public-read"
-	#set +x
+	set +x
 
 	echo "==> Check file exists in S3"
 	#set -x
