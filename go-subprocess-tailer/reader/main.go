@@ -1,12 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"os/exec"
-	"time"
 )
 
 func main() {
@@ -20,30 +19,17 @@ func main() {
 		log.Fatal(err)
 	}
 
+	s := bufio.NewScanner(stdout)
+	s.Split(bufio.ScanLines)
+
 	ch := make(chan string)
-	quit := make(chan bool)
 	go func() {
-		buf := make([]byte, 1024)
-		for {
-			n, err := stdout.Read(buf)
-			if n != 0 {
-				ch <- string(buf[:n])
-			}
-			if err != nil {
-				if err == io.EOF {
-					log.Println("[DEBUG]: End of file")
-					break
-				}
-				log.Fatal(err.Error())
-			}
+		for s.Scan() {
+			line := s.Text()
+			ch <- fmt.Sprintf("%v \n", line)
 		}
-
-		log.Println("[DEBUG]: Goroutine finished")
-
 		close(ch)
 	}()
-
-	time.AfterFunc(time.Second, func() { quit <- true })
 
 	for {
 		select {
@@ -52,8 +38,6 @@ func main() {
 				os.Exit(0)
 			}
 			fmt.Print(s)
-		case <-quit:
-			cmd.Process.Kill()
 		}
 	}
 
