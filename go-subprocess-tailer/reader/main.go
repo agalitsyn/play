@@ -8,9 +8,30 @@ import (
 	"os/exec"
 )
 
+const (
+	Byte     = 1.0
+	Kilobyte = 1024 * Byte
+	Megabyte = 1024 * Kilobyte
+)
+
+// tailMaxDepth defines how many last lines will tail output with no filter set
+const tailMaxDepth = 100
+
 func main() {
 	logFile := os.Args[1]
-	cmd := exec.Command("tail", "-n", "+1", "-f", logFile)
+
+	f, err := os.Stat(logFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	lines := "+1"
+	size := float32(f.Size())
+	if size > Megabyte {
+		lines = fmt.Sprintf("%v", tailMaxDepth)
+	}
+
+	cmd := exec.Command("tail", "--lines", lines, "--follow", logFile)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		log.Fatal(err)
@@ -40,5 +61,4 @@ func main() {
 			fmt.Print(s)
 		}
 	}
-
 }
