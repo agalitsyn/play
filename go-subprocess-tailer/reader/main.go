@@ -2,63 +2,170 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
-)
+	"regexp"
+	"strings"
+	"syscall"
+	"time"
 
-const (
-	Byte     = 1.0
-	Kilobyte = 1024 * Byte
-	Megabyte = 1024 * Kilobyte
+	"github.com/gravitational/trace"
 )
-
-// tailMaxDepth defines how many last lines will tail output with no filter set
-const tailMaxDepth = 100
 
 func main() {
-	logFile := os.Args[1]
+	var (
+		filter  = flag.String("filter", "", "Filter applied to log file (supports grep like regexp)")
+		logFile string
+	)
+	flag.Parse()
+	if len(flag.Args()) > 0 {
+		logFile = flag.Args()[0]
+	} else {
+		logFile = "."
+	}
 
-	f, err := os.Stat(logFile)
+	// read 100 last lines, but whole file if we have filter
+	lines := "100"
+	if *filter != "" {
+		lines = "+1"
+	}
+	// file could not exists yet, tail supports that case
+	readCmd := exec.Command("tail", "--lines", lines, "--follow", logFile, "--retry")
+	commands := []*exec.Cmd{readCmd}
+	if *filter != "" {
+		matcher := regexp.QuoteMeta(strings.TrimSpace(*filter))
+		filterCmd := exec.Command("grep", "--line-buffered", "--extended-regexp", matcher)
+		commands = append(commands, filterCmd)
+	}
+
+	pipeline, err := NewProcessGroup(commands...)
+	log.Printf("tailing pipeline: %s", pipeline)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("failed to build a command pipeline: %v", err)
 	}
+	defer pipeline.Close()
 
-	lines := "+1"
-	size := float32(f.Size())
-	if size > Megabyte {
-		lines = fmt.Sprintf("%v", tailMaxDepth)
-	}
-
-	cmd := exec.Command("tail", "--lines", lines, "--follow", logFile)
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		log.Fatal(err)
-	}
-	if err := cmd.Start(); err != nil {
-		log.Fatal(err)
-	}
-
-	s := bufio.NewScanner(stdout)
-	s.Split(bufio.ScanLines)
-
-	ch := make(chan string)
-	go func() {
-		for s.Scan() {
-			line := s.Text()
-			ch <- fmt.Sprintf("%v \n", line)
-		}
-		close(ch)
-	}()
-
+	ch := OutputScanner(pipeline)
 	for {
 		select {
-		case s, ok := <-ch:
+		case msg, ok := <-ch:
 			if !ok {
 				os.Exit(0)
 			}
-			fmt.Print(s)
+			fmt.Println(msg)
 		}
+	}
+}
+
+// OutputScanner spawns a goroutine to handle messages from the process group.
+// Returns a channel where the received messages are sent to.
+func OutputScanner(r io.Reader) chan string {
+	ch := make(chan string)
+	go func() {
+		s := bufio.NewScanner(r)
+		s.Split(bufio.ScanLines)
+		for s.Scan() {
+			ch <- string(s.Bytes())
+		}
+		log.Printf("closing tail message pump: %v", s.Err())
+	}()
+	return ch
+}
+
+// processGroup groups the processes that build a processing pipe
+//
+// implements fmt.Stringer
+// implements io.Closer
+// implements io.ReadCloser
+// implements io.Reader
+type processGroup struct {
+	commands []*exec.Cmd
+	closers  []io.Closer
+	stream   io.Reader
+}
+
+func NewProcessGroup(commands ...*exec.Cmd) (group *processGroup, err error) {
+	var stdout io.ReadCloser
+	var closers []io.Closer
+	for i, cmd := range commands {
+		stdout, err = cmd.StdoutPipe()
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
+		closers = append(closers, stdout)
+		cmd.Start()
+		if i < len(commands)-1 {
+			commands[i+1].Stdin = stdout
+		}
+	}
+
+	return &processGroup{
+		commands: commands,
+		closers:  closers,
+		stream:   stdout,
+	}, nil
+}
+
+func (r *processGroup) Read(p []byte) (n int, err error) {
+	n, err = r.stream.Read(p)
+	return n, err
+}
+
+func (r *processGroup) Close() (err error) {
+	// Close all open stdout handles
+	for _, closer := range r.closers {
+		closer.Close()
+	}
+	r.terminate()
+	return trace.Wrap(err)
+}
+
+func (r *processGroup) String() string {
+	var cmds []string
+	for _, cmd := range r.commands {
+		cmds = append(cmds, fmt.Sprintf("%v", cmd.Args))
+	}
+	return fmt.Sprintf("[%v]", strings.Join(cmds, ","))
+}
+
+// processTerminateTimeout defines the initial amount of time to wait for process to terminate
+const processTerminateTimeout = 200 * time.Millisecond
+
+func (r *processGroup) terminate() {
+	terminated := make(chan struct{})
+	head := r.commands[0]
+	go func() {
+		for _, cmd := range r.commands {
+			// Await termination of all processes in the group to prevent zombie processes
+			if err := cmd.Wait(); err != nil {
+				log.Printf("%v exited with %v", cmd.Path, err)
+			}
+		}
+		terminated <- struct{}{}
+	}()
+
+	if err := head.Process.Signal(syscall.SIGINT); err != nil {
+		log.Printf("cannot terminate with SIGINT: %v", err)
+	}
+
+	select {
+	case <-terminated:
+		return
+	case <-time.After(processTerminateTimeout):
+	}
+
+	if err := head.Process.Signal(syscall.SIGTERM); err != nil {
+		log.Printf("cannot terminate with SIGTERM: %v", err)
+	}
+
+	select {
+	case <-terminated:
+		return
+	case <-time.After(processTerminateTimeout * 2):
+		head.Process.Kill()
 	}
 }

@@ -15,7 +15,12 @@ func init() {
 }
 
 func main() {
-	logFile := os.Args[1]
+	var logFile string
+	if len(os.Args) > 0 {
+		logFile = os.Args[1]
+	} else {
+		log.Fatal("log file name is required")
+	}
 
 	f, err := os.OpenFile(logFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
