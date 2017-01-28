@@ -19,6 +19,7 @@ import (
 func main() {
 	var (
 		filter  = flag.String("filter", "", "Filter applied to log file (supports grep like regexp)")
+		limit   = flag.String("filter-limit", "10", "Limit filter output")
 		logFile string
 	)
 	flag.Parse()
@@ -28,18 +29,17 @@ func main() {
 		logFile = "."
 	}
 
-	// read 100 last lines, but whole file if we have filter
-	lines := "100"
-	if *filter != "" {
-		lines = "+1"
-	}
 	// file could not exists yet, tail supports that case
-	readCmd := exec.Command("tail", "--lines", lines, "--follow", logFile, "--retry")
-	commands := []*exec.Cmd{readCmd}
+	commands := []*exec.Cmd{}
 	if *filter != "" {
+		// grep asdf test.log | tail -n 3; tail -f -n0 test.log
 		matcher := regexp.QuoteMeta(strings.TrimSpace(*filter))
-		filterCmd := exec.Command("grep", "--line-buffered", "--extended-regexp", matcher)
-		commands = append(commands, filterCmd)
+		filterCmd := exec.Command("grep", "--line-buffered", "--extended-regexp", matcher, logFile)
+		limitCmd := exec.Command("/bin/sh", "-c", fmt.Sprintf("tail --lines %v; tail --follow --lines 0 %v", *limit, logFile))
+		commands = append(commands, filterCmd, limitCmd)
+	} else {
+		readCmd := exec.Command("tail", "--lines", "100", "--follow", logFile, "--retry")
+		commands = append(commands, readCmd)
 	}
 
 	pipeline, err := NewProcessGroup(commands...)
