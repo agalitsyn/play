@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	log "github.com/Sirupsen/logrus"
@@ -19,10 +20,11 @@ func IRaiseAnErrorToo() error {
 
 func IRaiseAnError() error {
 	if err := IRaiseAnErrorToo(); err != nil {
-		return trace.Wrap(err, "custom message")
+		return trace.Wrap(err, "I failed, but here is text which masked original error text with custom message")
 	}
 	return nil
 }
+
 func InitLoggerDebug() {
 	// clear existing hooks:
 	log.StandardLogger().Hooks = make(log.LevelHooks)
@@ -32,10 +34,16 @@ func InitLoggerDebug() {
 }
 
 func main() {
-	InitLoggerDebug()
+	fmt.Println("compare output:")
 
+	InitLoggerDebug()
 	if err := IRaiseAnError(); err != nil {
+		fmt.Println("======= error with trace")
+		log.Error(err)
+
+		fmt.Println("======= debug report")
 		log.Error(trace.DebugReport(err))
+
 		os.Exit(1)
 	}
 }
