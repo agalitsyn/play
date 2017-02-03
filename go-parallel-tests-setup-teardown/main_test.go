@@ -13,23 +13,25 @@ func TestCreateFile(t *testing.T) {
 		log.Fatal(err)
 	}
 
-	tc := []struct {
-		dir string
-	}{
-		{tmpDir},
-		{tmpDir},
-	}
-	for _, tt := range tc {
-		tt := tt
-		t.Run("", func(st *testing.T) {
-			st.Parallel()
+	t.Run("group", func(t *testing.T) {
+		tc := []struct {
+			dir string
+		}{
+			{tmpDir},
+			{tmpDir},
+		}
+		for _, tt := range tc {
+			tt := tt
+			t.Run("", func(st *testing.T) {
+				st.Parallel()
 
-			_, err := createFile(tt.dir)
-			if err != nil {
-				t.Fatal(err)
-			}
-		})
-	}
+				_, err := createFile(tt.dir)
+				if err != nil {
+					t.Fatal(err)
+				}
+			})
+		}
 
+	})
 	os.RemoveAll(tmpDir)
 }
