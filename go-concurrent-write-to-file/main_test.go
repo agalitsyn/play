@@ -98,12 +98,9 @@ func TestWriteToFileByChannel(t *testing.T) {
 
 	go writeFromChannel(queue, complete, errors, f)
 
-	go func() {
-		queue <- []byte("test\n")
-		queue <- []byte("test\n")
-		close(queue)
-
-	}()
+	queue <- []byte("test\n")
+	queue <- []byte("test\n")
+	close(queue)
 
 	go func() {
 		for {
