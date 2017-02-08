@@ -25,11 +25,17 @@ func main() {
 // seems that we don't need to do sync on app level, because kernel did it for us
 //
 // But POSIX says:
-//	This volume of POSIX.1-2008 does not specify behavior of concurrent writes to a file from multiple processes. Applications should use some form of concurrency control.
+//		This volume of POSIX.1-2008 does not specify behavior of concurrent writes to a file from multiple processes. Applications should use some form of concurrency control.
 // ...which means that you're on your own - different UNIX-likes will give different guarantees.
 //
 // But.. see https://www.cs.helsinki.fi/linux/linux-kernel/2002-30/1396.html
 // ...which means if you need an _order_ in concurrent write you _should_ use O_APPEND
+//
+// But Linux wrote
+//		I still consider any program relying on this behaviour buggy. Your
+//		"atomic" write is an illusion, the os can certainly try, but in the end
+//		it's the applications responsibility to get this right.
+// ... which means you might want to do sync for guarantees
 func write(data []byte, f *os.File) error {
 	_, err := f.Write(data)
 	if err != nil {
