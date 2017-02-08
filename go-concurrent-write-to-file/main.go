@@ -31,7 +31,7 @@ func main() {
 // But.. see https://www.cs.helsinki.fi/linux/linux-kernel/2002-30/1396.html
 // ...which means if you need an _order_ in concurrent write you _should_ use O_APPEND
 //
-// But Linux wrote
+// But Linus wrote:
 //		I still consider any program relying on this behaviour buggy. Your
 //		"atomic" write is an illusion, the os can certainly try, but in the end
 //		it's the applications responsibility to get this right.
