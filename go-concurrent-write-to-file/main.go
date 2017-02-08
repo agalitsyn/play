@@ -1,24 +1,14 @@
 package main
 
 import (
-	"log"
+	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 )
 
 func main() {
-	f, err := tempFile(os.TempDir())
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	data := []byte("test\n")
-	err = write(data, f)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	log.Println("content written to", f.Name())
+	fmt.Println("run: make test")
 }
 
 // see BUGS here http://man7.org/linux/man-pages/man2/write.2.html
@@ -50,4 +40,29 @@ func tempFile(dir string) (*os.File, error) {
 		return nil, err
 	}
 	return f, nil
+}
+
+type protectedFile struct {
+	f  *os.File
+	mu *sync.Mutex
+}
+
+func (pf *protectedFile) Write(b []byte) error {
+	pf.mu.Lock()
+	defer pf.mu.Unlock()
+	_, err := pf.f.Write(b)
+	if err != nil {
+		return nil
+	}
+	return nil
+}
+
+func writeFromChannel(queue chan []byte, complete chan bool, errors chan error, f *os.File) {
+	for data := range queue {
+		_, err := f.Write(data)
+		if err != nil {
+			errors <- err
+		}
+	}
+	complete <- true
 }
