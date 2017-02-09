@@ -1,0 +1,1 @@
+# golang race in closure
