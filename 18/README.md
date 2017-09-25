@@ -1,1 +1,0 @@
-# golang web mock

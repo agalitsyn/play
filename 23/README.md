@@ -1,1 +1,0 @@
-# golang modify struct
