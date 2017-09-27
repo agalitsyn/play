@@ -1,5 +1,5 @@
 NOROOT := -u $$(id -u):$$(id -g)
-SRCDIR := /go/src/github.com/agalitsyn/38-context-propagation
+SRCDIR := /go/src/github.com/agalitsyn/play/38-context-propagation
 DOCKERFLAGS := --rm=true $(NOROOT) -v $(CURDIR):$(SRCDIR) -w $(SRCDIR)
 BUILD_IMAGE := golang
 BUILD_IMAGE_TAG ?= 1.9
