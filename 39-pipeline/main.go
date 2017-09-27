@@ -10,7 +10,6 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -20,46 +19,59 @@ func main() {
 	log.SetLevel(log.DebugLevel)
 
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	signalChan := make(chan os.Signal, 1)
 	signal.Ignore(syscall.SIGHUP, syscall.SIGPIPE)
 	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
 
-	rawData, readerErrs := readerProducer(ctx, bytes.NewReader([]byte("foo bar baz")))
-	rawData2, readerErrs2 := readerProducer(ctx, badReader{})
-	rawData3 := randomProducer(ctx, 250*time.Millisecond)
-	rawData4 := randomProducer(ctx, 750*time.Millisecond)
+	var wg sync.WaitGroup
 
-	errs := mergeErrors(ctx, readerErrs, readerErrs2)
+	// wg.Add(4)
+	// rawData, readerErrs := readerProducer(ctx, &wg, bytes.NewReader([]byte("foo bar baz")))
+	// rawData2, readerErrs2 := readerProducer(ctx, &wg, badReader{})
+	wg.Add(2)
+	rawData3 := randomProducer(ctx, &wg)
+	rawData4 := randomProducer(ctx, &wg)
 
-	processedData := upperCaseProcessor(ctx, rawData)
-	processedData2 := upperCaseProcessor(ctx, rawData2)
-	processedData3 := upperCaseProcessor(ctx, rawData3)
-	processedData4 := upperCaseProcessor(ctx, rawData4)
+	// wg.Add(1)
+	// errs := mergeErrors(ctx, &wg, readerErrs, readerErrs2)
 
-	output := merge(ctx, processedData, processedData2, processedData3, processedData4)
+	wg.Add(2)
+	// processedData := upperCaseProcessor(ctx, &wg, rawData)
+	// processedData2 := upperCaseProcessor(ctx, &wg, rawData2)
+	processedData3 := upperCaseProcessor(ctx, &wg, rawData3)
+	processedData4 := upperCaseProcessor(ctx, &wg, rawData4)
 
-	go func() {
-		s := <-signalChan
-		log.Printf("captured %v, exiting", s)
-		cancel()
-	}()
-	go func() {
-		for err := range errs {
-			log.Error(err)
-		}
-		log.Info("errors done")
-	}()
+	wg.Add(1)
+	output := merge(ctx, &wg, processedData3, processedData4)
+
+	// go func() {
+	// 	s := <-signalChan
+	// 	log.Printf("captured %v, exiting", s)
+	// 	cancel()
+	// }()
+	// go func() {
+	// 	for err := range errs {
+	// 		log.Error(err)
+	// 	}
+	// 	log.Info("errors done")
+	// }()
 
 	for data := range output {
 		fmt.Println(string(data))
+		cancel()
 	}
+
+	wg.Wait()
 }
 
-func upperCaseProcessor(ctx context.Context, in <-chan []byte) <-chan []byte {
+func upperCaseProcessor(ctx context.Context, wg *sync.WaitGroup, in <-chan []byte) <-chan []byte {
 	out := make(chan []byte)
 	go func() {
+		defer wg.Done()
 		defer close(out)
+
 		for n := range in {
 			select {
 			case out <- bytes.ToUpper(n):
@@ -72,29 +84,32 @@ func upperCaseProcessor(ctx context.Context, in <-chan []byte) <-chan []byte {
 	return out
 }
 
-func merge(ctx context.Context, inputs ...<-chan []byte) <-chan []byte {
-	var wg sync.WaitGroup
+func merge(ctx context.Context, wg *sync.WaitGroup, inputs ...<-chan []byte) <-chan []byte {
+	var lwg sync.WaitGroup
 	out := make(chan []byte)
 
 	output := func(c <-chan []byte) {
-		defer wg.Done()
+		defer lwg.Done()
+
 		for d := range c {
 			select {
 			case out <- d:
 			case <-ctx.Done():
-				log.Debug("cancel merge")
+				log.Debug("cancel merge receiver")
 				return
 			}
 		}
 	}
 
-	wg.Add(len(inputs))
+	lwg.Add(len(inputs))
 	for _, input := range inputs {
 		go output(input)
 	}
 
 	go func() {
-		wg.Wait()
+		defer wg.Done()
+
+		lwg.Wait()
 		close(out)
 	}()
 
@@ -124,10 +139,12 @@ func RandBytesString(n int) []byte {
 	return b
 }
 
-func randomProducer(ctx context.Context, pause time.Duration) <-chan []byte {
+func randomProducer(ctx context.Context, wg *sync.WaitGroup) <-chan []byte {
 	out := make(chan []byte)
 	go func() {
 		defer close(out)
+		defer wg.Done()
+
 		for {
 			select {
 			case out <- RandBytesString(8):
@@ -135,18 +152,18 @@ func randomProducer(ctx context.Context, pause time.Duration) <-chan []byte {
 				log.Debug("cancel random producer")
 				return
 			}
-			time.Sleep(pause)
 		}
 	}()
 	return out
 }
 
-func readerProducer(ctx context.Context, r io.Reader) (chan []byte, chan error) {
+func readerProducer(ctx context.Context, wg *sync.WaitGroup, r io.Reader) (chan []byte, chan error) {
 	out := make(chan []byte)
 	errs := make(chan error)
 	go func() {
 		defer close(out)
 		defer close(errs)
+		defer wg.Done()
 
 		buf := make([]byte, 10)
 		for {
@@ -170,12 +187,13 @@ func readerProducer(ctx context.Context, r io.Reader) (chan []byte, chan error) 
 	return out, errs
 }
 
-func mergeErrors(ctx context.Context, inputs ...<-chan error) <-chan error {
-	var wg sync.WaitGroup
+func mergeErrors(ctx context.Context, wg *sync.WaitGroup, inputs ...<-chan error) <-chan error {
+	var lwg sync.WaitGroup
 	outCh := make(chan error)
 
 	receiver := func(ch <-chan error) {
-		defer wg.Done()
+		defer lwg.Done()
+
 		for e := range ch {
 			select {
 			case outCh <- e:
@@ -186,13 +204,15 @@ func mergeErrors(ctx context.Context, inputs ...<-chan error) <-chan error {
 		}
 	}
 
-	wg.Add(len(inputs))
+	lwg.Add(len(inputs))
 	for _, input := range inputs {
 		go receiver(input)
 	}
 
 	go func() {
-		wg.Wait()
+		defer wg.Done()
+
+		lwg.Wait()
 		close(outCh)
 	}()
 
