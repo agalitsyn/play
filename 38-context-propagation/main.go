@@ -26,6 +26,7 @@ func main() {
 			break
 		}
 	}
+
 	wg.Wait()
 }
 
