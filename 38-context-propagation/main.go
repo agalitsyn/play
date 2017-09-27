@@ -51,7 +51,7 @@ func gen(ctx context.Context, wg *sync.WaitGroup) <-chan int {
 
 func merge(ctx context.Context, wg *sync.WaitGroup, inputs ...<-chan int) <-chan int {
 	var lwg sync.WaitGroup
-	outCh := make(chan int, len(inputs))
+	outCh := make(chan int)
 
 	receiver := func(ch <-chan int) {
 		defer lwg.Done()
@@ -87,3 +87,4 @@ func merge(ctx context.Context, wg *sync.WaitGroup, inputs ...<-chan int) <-chan
 
 	return outCh
 }
+
