@@ -55,9 +55,15 @@ func merge(ctx context.Context, wg *sync.WaitGroup, inputs ...<-chan int) <-chan
 
 	receiver := func(ch <-chan int) {
 		defer lwg.Done()
-		for i := range ch {
+		for {
 			select {
-			case outCh <- i:
+			case v := <-ch:
+				select {
+				case <-ctx.Done():
+					log.Printf("close receiver: %v", ctx.Err())
+					return
+				case outCh <- v:
+				}
 			case <-ctx.Done():
 				log.Printf("close receiver: %v", ctx.Err())
 				return
@@ -67,7 +73,9 @@ func merge(ctx context.Context, wg *sync.WaitGroup, inputs ...<-chan int) <-chan
 
 	lwg.Add(len(inputs))
 	for _, input := range inputs {
-		go receiver(input)
+		go func(i <-chan int) {
+			receiver(i)
+		}(input)
 	}
 
 	go func() {
@@ -79,3 +87,4 @@ func merge(ctx context.Context, wg *sync.WaitGroup, inputs ...<-chan int) <-chan
 
 	return outCh
 }
+
