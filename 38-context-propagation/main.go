@@ -57,16 +57,16 @@ func merge(ctx context.Context, wg *sync.WaitGroup, inputs ...<-chan int) <-chan
 	// Start an receiver goroutine for each input channel. receiver
 	// copies values from ch to outCh until ch is closed, then calls wg.Done.
 	receiver := func(ch <-chan int) {
-		defer lwg.Done()
-		for {
+		defer func() {
+			if ctx.Err() != nil {
+				log.Printf("merge receiver: %v", ctx.Err())
+			}
+			lwg.Done()
+		}()
+
+		for i := range ch {
 			select {
-			case v := <-ch:
-				select {
-				case <-ctx.Done():
-					log.Printf("close receiver: %v", ctx.Err())
-					return
-				case outCh <- v:
-				}
+			case outCh <- i:
 			case <-ctx.Done():
 				return
 			}
@@ -75,9 +75,7 @@ func merge(ctx context.Context, wg *sync.WaitGroup, inputs ...<-chan int) <-chan
 
 	lwg.Add(len(inputs))
 	for _, input := range inputs {
-		go func(i <-chan int) {
-			receiver(i)
-		}(input)
+		go receiver(input)
 	}
 
 	// Start a goroutine to close out once all the receiver goroutines are
