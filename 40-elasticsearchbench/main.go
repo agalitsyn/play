@@ -11,37 +11,35 @@ import (
 	"net/url"
 	"os"
 	"runtime"
-	"sync"
+	"time"
 
 	"gopkg.in/olivere/elastic.v5"
 )
 
 func main() {
 	var (
-		elasticScheme = flag.String("elastic-scheme", "http", "")
-		elasticHost   = flag.String("elastic-host", "localhost", "")
-		elasticPort   = flag.String("elastic-port", "9200", "")
-		elasticIndex  = flag.String("elastic-index", "mylog", "")
-		messages      = flag.Int("messages-num", 10, "")
+		elasticScheme      = flag.String("elastic-scheme", "http", "")
+		elasticHost        = flag.String("elastic-host", "localhost", "")
+		elasticPort        = flag.String("elastic-port", "9200", "")
+		elasticIndex       = flag.String("elastic-index", "mylog", "")
+		elasticBulkActions = flag.Int("elastic-bulk-actions", 1000, "")
+		elasticBulkSize    = flag.Int("elastic-bulk-size", 5*1024*1024, "")
+		messages           = flag.Int("messages-num", 10000, "")
+		watchInt           = flag.Duration("watch-interval", 10*time.Second, "")
 	)
 	flag.Parse()
 
-	workers := runtime.GOMAXPROCS(-1)
-	messagesPerWorker := *messages / workers
-	log.Printf("workers: %d, message per worker: %d\n", workers, messagesPerWorker)
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
 
 	u := url.URL{
 		Scheme: *elasticScheme,
 		Host:   net.JoinHostPort(*elasticHost, *elasticPort),
 	}
-	errorlog := log.New(os.Stdout, "EL ", log.LstdFlags)
-	client, err := elastic.NewClient(elastic.SetErrorLog(errorlog), elastic.SetURL(u.String()))
+	client, err := elastic.NewClient(elastic.SetErrorLog(log.New(os.Stdout, "EL ", log.LstdFlags)), elastic.SetURL(u.String()))
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	ctx, cancel := context.WithCancel(context.TODO())
-	defer cancel()
 
 	exists, err := client.IndexExists(*elasticIndex).Do(ctx)
 	if err != nil {
@@ -57,29 +55,65 @@ func main() {
 		}
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(workers)
-	for w := 1; w <= workers; w++ {
-		go func(id int) {
-			defer wg.Done()
-			for i := 0; i < messagesPerWorker; i++ {
-				fields := map[string]interface{}{
-					"http_scheme": "http",
-					"http_proto":  "HTTP/1.0",
-					"http_method": methods[rand.Intn(len(methods))],
-					"remote_addr": hosts[rand.Intn(len(hosts))],
-					"user_agent":  userAgents[rand.Intn(len(userAgents))],
-					"uri":         fmt.Sprintf("%s://%s/%s", schemes[rand.Intn(len(schemes))], hosts[rand.Intn(len(hosts))], urls[rand.Intn(len(urls))]),
-				}
-				resp, err := client.Index().Index(*elasticIndex).Type("log").BodyJson(fields).Do(ctx)
-				if err != nil {
-					log.Println(err)
-				}
-				log.Printf("worker: %d, msg: %s\n", id, resp.Id)
-			}
-		}(w)
+	workers := runtime.GOMAXPROCS(-1)
+	svc := client.BulkProcessor().Workers(workers).BulkActions(*elasticBulkActions).BulkSize(*elasticBulkSize)
+	proc, err := svc.Stats(true).Do(ctx)
+	if err != nil {
+		log.Fatal(err)
 	}
-	wg.Wait()
+
+	printStats := func() {
+		stats := proc.Stats()
+		fmt.Printf("workers: %d\n", len(stats.Workers))
+		fmt.Printf("successed: %d\n", stats.Succeeded)
+		fmt.Printf("created: %d\n", stats.Created)
+		fmt.Printf("failed: %d\n", stats.Failed)
+		fmt.Printf("flushed: %d\n", stats.Flushed)
+		fmt.Printf("commited: %d\n", stats.Committed)
+		fmt.Println()
+	}
+
+	start := time.Now()
+
+	go func() {
+		log.Println("start watcher")
+		for {
+			select {
+			case <-time.After(*watchInt):
+				elapsed := time.Since(start)
+				log.Printf("took %s", elapsed)
+				printStats()
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
+	for i := 1; i <= *messages; i++ {
+		randReq := map[string]interface{}{
+			"http_scheme": "http",
+			"http_proto":  "HTTP/1.0",
+			"http_method": methods[rand.Intn(len(methods))],
+			"remote_addr": hosts[rand.Intn(len(hosts))],
+			"user_agent":  userAgents[rand.Intn(len(userAgents))],
+			"uri":         fmt.Sprintf("%s://%s/%s", schemes[rand.Intn(len(schemes))], hosts[rand.Intn(len(hosts))], urls[rand.Intn(len(urls))]),
+		}
+		request := elastic.NewBulkIndexRequest().Index(*elasticIndex).Type("log").OpType("create").Id(fmt.Sprintf("%d", i)).Doc(randReq)
+		proc.Add(request)
+	}
+
+	if err := proc.Flush(); err != nil {
+		log.Fatal(err)
+	}
+
+	printStats()
+
+	if err := proc.Close(); err != nil {
+		log.Fatal(err)
+	}
+
+	elapsed := time.Since(start)
+	log.Printf("total %s", elapsed)
 }
 
 var urls = []string{
