@@ -26,17 +26,18 @@ func main() {
 		elasticBulkSize    = flag.Int("elastic-bulk-size", 5*1024*1024, "")
 		messages           = flag.Int("messages-num", 10000, "")
 		watchInt           = flag.Duration("watch-interval", 10*time.Second, "")
+		workers            = flag.Int("workers", runtime.GOMAXPROCS(-1), "")
 	)
 	flag.Parse()
 
-	ctx, cancel := context.WithCancel(context.TODO())
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	u := url.URL{
 		Scheme: *elasticScheme,
 		Host:   net.JoinHostPort(*elasticHost, *elasticPort),
 	}
-	client, err := elastic.NewClient(elastic.SetErrorLog(log.New(os.Stdout, "EL ", log.LstdFlags)), elastic.SetURL(u.String()))
+	client, err := elastic.NewClient(elastic.SetErrorLog(log.New(os.Stdout, "EL: ", log.LstdFlags)), elastic.SetURL(u.String()), elastic.SetSniff(false))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -55,8 +56,7 @@ func main() {
 		}
 	}
 
-	workers := runtime.GOMAXPROCS(-1)
-	svc := client.BulkProcessor().Workers(workers).BulkActions(*elasticBulkActions).BulkSize(*elasticBulkSize)
+	svc := client.BulkProcessor().Workers(*workers).BulkActions(*elasticBulkActions).BulkSize(*elasticBulkSize)
 	proc, err := svc.Stats(true).Do(ctx)
 	if err != nil {
 		log.Fatal(err)
