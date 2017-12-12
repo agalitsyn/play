@@ -1,0 +1,53 @@
+version: '2'
+
+volumes:
+    grafana_data: {}
+
+services:
+  grafana:
+    image: grafana/grafana:latest
+    depends_on:
+      - clickhouse-server
+      - elasticsearch
+    ports:
+      - 3000:3000
+    volumes:
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+
+  clickhouse-server:
+    image: yandex/clickhouse-server
+    ports:
+      - 8123:8123
+      - 9000:9000
+      - 9009:9009
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+
+  clickhouse-client:
+    image: yandex/clickhouse-client
+    entrypoint: echo "started" && sleep infinity
+    depends_on:
+      - clickhouse-server
+    links:
+      - clickhouse-server:clickhouse-server
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:6.0.0
+    ports:
+      - 9200:9200
+      - 9300:9300
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    environment:
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - network.host=0.0.0.0
+      - network.publish_host=0.0.0.0

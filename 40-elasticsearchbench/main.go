@@ -97,6 +97,7 @@ func main() {
 			"remote_addr": hosts[rand.Intn(len(hosts))],
 			"user_agent":  userAgents[rand.Intn(len(userAgents))],
 			"uri":         fmt.Sprintf("%s://%s/%s", schemes[rand.Intn(len(schemes))], hosts[rand.Intn(len(hosts))], urls[rand.Intn(len(urls))]),
+			"@timestamp":  time.Now(),
 		}
 		request := elastic.NewBulkIndexRequest().Index(*elasticIndex).Type("log").OpType("create").Id(fmt.Sprintf("%d", i)).Doc(randReq)
 		proc.Add(request)
