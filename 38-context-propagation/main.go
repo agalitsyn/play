@@ -11,6 +11,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// Wait all goroutines are done
 	var wg sync.WaitGroup
 	wg.Add(4)
 	out1 := gen(ctx, &wg)
@@ -21,28 +22,28 @@ func main() {
 	for n := range output {
 		fmt.Println(n)
 		if n == 10 {
-			log.Println("canceling")
+			// propagate cancel to all goroutines
 			cancel()
 			break
 		}
 	}
-
 	wg.Wait()
 }
 
 func gen(ctx context.Context, wg *sync.WaitGroup) <-chan int {
 	ch := make(chan int)
 	go func() {
+		defer close(ch)
 		defer wg.Done()
 
 		var n int
 		for {
 			select {
-			case <-ctx.Done():
-				log.Printf("close gen: %v", ctx.Err())
-				return
 			case ch <- n:
 				n++
+			case <-ctx.Done():
+				log.Printf("gen: %v", ctx.Err())
+				return
 			}
 		}
 	}()
@@ -53,13 +54,20 @@ func merge(ctx context.Context, wg *sync.WaitGroup, inputs ...<-chan int) <-chan
 	var lwg sync.WaitGroup
 	outCh := make(chan int)
 
+	// Start an receiver goroutine for each input channel. receiver
+	// copies values from ch to outCh until ch is closed, then calls wg.Done.
 	receiver := func(ch <-chan int) {
-		defer lwg.Done()
+		defer func() {
+			if ctx.Err() != nil {
+				log.Printf("merge receiver: %v", ctx.Err())
+			}
+			lwg.Done()
+		}()
+
 		for i := range ch {
 			select {
 			case outCh <- i:
 			case <-ctx.Done():
-				log.Printf("close receiver: %v", ctx.Err())
 				return
 			}
 		}
@@ -70,6 +78,8 @@ func merge(ctx context.Context, wg *sync.WaitGroup, inputs ...<-chan int) <-chan
 		go receiver(input)
 	}
 
+	// Start a goroutine to close out once all the receiver goroutines are
+	// done. This must start after the wg.Add call.
 	go func() {
 		defer wg.Done()
 
