@@ -8,12 +8,7 @@ services:
     volumes:
       - ./nginx:/etc/nginx/conf.d
     
-  api_one:
-    image: gcr.io/google-samples/hello-app:1.0
-    ports:
-      - "8080"
-
-  api_two:
+  api:
     image: gcr.io/google-samples/hello-app:1.0
     ports:
       - "8080"
