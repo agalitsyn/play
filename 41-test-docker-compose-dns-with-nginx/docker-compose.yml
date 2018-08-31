@@ -1,0 +1,19 @@
+version: "3.2"
+
+services:
+  lb:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+    
+  api_one:
+    image: gcr.io/google-samples/hello-app:1.0
+    ports:
+      - "8080"
+
+  api_two:
+    image: gcr.io/google-samples/hello-app:1.0
+    ports:
+      - "8080"
