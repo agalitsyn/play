@@ -1,6 +1,6 @@
 # xargs
 
-Run `go run main.go --help` for details. Also you might want to compile it using `go build`.
+Run `go run xargs.go --help` for details. Also you might want to compile it using `go build`.
 
 ## Examples
 
