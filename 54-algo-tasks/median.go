@@ -16,12 +16,23 @@
 //
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"sort"
+)
 
-func main() {
-	fmt.Println(median([]int{2, 8, 5, 1, 4}))
-}
+func Median(data []int) float64 {
+	if len(data) < 1 {
+		return 0.0
+	}
 
-func median(data []int) float64 {
-	return 4
+	sort.Ints(data)
+	fmt.Printf("%+v\n", data)
+
+	if len(data)%2 == 0 {
+		middle := len(data) / 2
+		x, y := data[middle-1], data[middle]
+		return (float64(x) + float64(y))/2.0
+	}
+	return float64(data[len(data)/2])
 }

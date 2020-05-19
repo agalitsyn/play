@@ -3,19 +3,25 @@
 // Source: https://habr.com/ru/company/yandex/blog/449890/
 // https://contest.yandex.ru/contest/8458/problems/E/
 //
-// Find if string is anagram.
+// Find if string is an anagram.
 //
 // Example:
-// In: qiu, iuq
+// In: qiu, uiq
 // Out: true
 package main
 
-import "fmt"
+func Anagram(w1, w2 string) bool {
+	if w1 == "" || w2 == "" {
+		return false
+	}
 
-func main() {
-	fmt.Println(isAnagram("qiu", "iuq"))
-}
+	n := len(w1)
+    runes := make([]rune, n)
+    for _, rune := range w1 {
+        n--
+        runes[n] = rune
+    }
 
-func isAnagram(w1, w2 string) bool {
-	return true
+	w2Rev := string(runes[n:])
+	return w1 == w2Rev
 }

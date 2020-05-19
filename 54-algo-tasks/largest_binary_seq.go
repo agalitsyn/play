@@ -10,12 +10,17 @@
 // 4
 package main
 
-import "fmt"
+func LargestSeq(data []int) int {
+	if len(data) < 1 {
+		return 0
+	}
 
-func main() {
-	fmt.Println(largestSeq([]int{1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1}))
-}
-
-func largestSeq(data []int) int {
-	return 4
+	count := 1
+	prev := 0
+	for i := 0; i< len(data); i++ {
+		if prev == data[i] {
+			count++
+		}
+	}
+	return count
 }
