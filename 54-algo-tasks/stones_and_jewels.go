@@ -2,6 +2,7 @@
 //
 // Source: https://habr.com/ru/company/yandex/blog/449890/
 // https://contest.yandex.ru/contest/8458/problems/?nc=kjmvs8aV
+// https://leetcode.com/problems/jewels-and-stones/
 // https://rosettacode.org/wiki/Jewels_and_Stones#Go
 //
 // Create a function which takes two string parameters: 'stones' and 'jewels' and returns an integer.
@@ -15,12 +16,19 @@
 //
 package main
 
-import "fmt"
+func StonesAndJewels(stones, jewels string) int {
+	jewelsSet := make(map[rune]bool)
+	for _, j := range jewels {
+		if _, ok := jewelsSet[j]; !ok {
+			jewelsSet[j] = true
+		}
+	}
 
-func main() {
-	fmt.Println(js("aAAbbbb", "aA"))
-}
-
-func js(stones, jewels string) int {
-	return 3
+	count := 0
+	for _, s := range stones {
+		if _, ok := jewelsSet[s]; ok {
+			count++
+		}
+	}
+	return count
 }

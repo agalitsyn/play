@@ -10,12 +10,14 @@
 // Out: [2, 4, 8]
 package main
 
-import "fmt"
-
-func main() {
-    fmt.Println(removeDups([]int{2, 4, 8, 8, 8}))
-}
-
-func removeDups(data []int) []int {
-    return []int{2, 4, 8}
+func RemoveDups(data []int) []int {
+	var res []int
+	uniques := make(map[int]bool)
+	for i := 0; i < len(data); i++ {
+		if _, ok := uniques[data[i]]; !ok {
+			uniques[data[i]] = true
+			res = append(res, data[i])
+		}
+	}
+	return res
 }
