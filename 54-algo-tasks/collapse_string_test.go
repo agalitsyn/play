@@ -11,7 +11,7 @@ func Test_CollapseString(t *testing.T) {
 		in  string
 		out string
 	}{
-		{"SSSXYZBBAAA", "S3XYZB2A2"},
+		{"SSSXYZBBAAA", "S3XYZB2A3"},
 		{"ABC", "ABC"},
 		{"", ""},
 		{"AAAA", "A4"},

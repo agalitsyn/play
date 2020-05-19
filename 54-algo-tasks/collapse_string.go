@@ -6,33 +6,37 @@
 //
 // Example:
 // In: SSSXYZBBAAA
-// Out: S3XYZB2A2
+// Out: S3XYZB2A3
 package main
 
-import (
-	"fmt"
-	"strconv"
-)
+import "strconv"
 
 func CollapseString(data string) string {
+	if len(data) < 1 {
+		return data
+	}
+
 	res := ""
-	var prev rune
-	count := 0
-
-	for i, s := range data {
-		fmt.Printf("%s\n", string(s))
-		fmt.Printf("%v\n", i)
-		if prev != s {
-			if count != 0 {
-				res += string(strconv.Itoa(count + 1))
-			}
-
-			res += string(s)
-			count = 0
-			prev = s
-		} else {
+	count := 1
+	for i := 0; i < len(data)-1; i++ {
+		if data[i] == data[i+1] {
 			count++
+		} else {
+			res += string(data[i])
+			if count > 1 {
+				res += strconv.Itoa(count)
+			}
+			count = 1
 		}
+	}
+
+	res += string(data[len(data)-1])
+	if count > 1 {
+		res += strconv.Itoa(count)
+	}
+
+	if len(res) > len(data) {
+		return data
 	}
 	return res
 }
