@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func Test_StonesAndJewels(t *testing.T) {
+func Test_Solve(t *testing.T) {
 	var tests = []struct {
 		stones string
 		jewels string
@@ -17,7 +17,7 @@ func Test_StonesAndJewels(t *testing.T) {
 	}
 	for i, tt := range tests {
 		t.Run(strconv.Itoa(i+1), func(t *testing.T) {
-			res := StonesAndJewels(tt.stones, tt.jewels)
+			res := Solve(tt.stones, tt.jewels)
 			if res != tt.out {
 				t.Errorf("got %q, want %q", res, tt.out)
 			}

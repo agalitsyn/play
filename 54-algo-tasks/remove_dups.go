@@ -10,7 +10,7 @@
 // Out: [2, 4, 8]
 package main
 
-func RemoveDups(data []int) []int {
+func Solve(data []int) []int {
 	var res []int
 	uniques := make(map[int]bool)
 	for i := 0; i < len(data); i++ {

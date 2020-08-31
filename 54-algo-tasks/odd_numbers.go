@@ -13,7 +13,7 @@ import (
 	"sort"
 )
 
-func SortOddNumbers(data []int) []int {
+func Solve(data []int) []int {
 	var oddNumbers []int
 	for i := 0; i < len(data); i++ {
 		if data[i]%2 != 0 {

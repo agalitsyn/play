@@ -25,7 +25,7 @@ package main
 import "fmt"
 
 func main() {
-	fmt.Println(findFreeSlots(
+	fmt.Println(Solve(
 		[][]string{
 			{"9:00", "10:30"},
 			{"12:00", "13:00"},
@@ -41,7 +41,7 @@ func main() {
 	))
 }
 
-func findFreeSlots(p1Cal, p2Cal [][]string, meetingDuration string) [][]string {
+func Solve(p1Cal, p2Cal [][]string, meetingDuration string) [][]string {
 	return [][]string{
 		{"10:00", "11:30"},
 		{"12:30", "14:30"},

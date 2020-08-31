@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func Test_SortOddNumbers(t *testing.T) {
+func Test_Solve(t *testing.T) {
 	var tests = []struct {
 		in  []int
 		out []int
@@ -17,7 +17,7 @@ func Test_SortOddNumbers(t *testing.T) {
 	}
 	for i, tt := range tests {
 		t.Run(strconv.Itoa(i+1), func(t *testing.T) {
-			res := SortOddNumbers(tt.in)
+			res := Solve(tt.in)
 			if !reflect.DeepEqual(res, tt.out) {
 				t.Errorf("got %+v, want %+v", res, tt.out)
 			}

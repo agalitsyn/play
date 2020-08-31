@@ -11,7 +11,7 @@ package main
 
 import "strconv"
 
-func CollapseString(data string) string {
+func Solve(data string) string {
 	if len(data) < 1 {
 		return data
 	}

@@ -21,7 +21,7 @@ import (
 	"sort"
 )
 
-func Median(data []int) float64 {
+func Solve(data []int) float64 {
 	if len(data) < 1 {
 		return 0.0
 	}
@@ -32,7 +32,7 @@ func Median(data []int) float64 {
 	if len(data)%2 == 0 {
 		middle := len(data) / 2
 		x, y := data[middle-1], data[middle]
-		return (float64(x) + float64(y))/2.0
+		return (float64(x) + float64(y)) / 2.0
 	}
 	return float64(data[len(data)/2])
 }

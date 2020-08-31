@@ -10,17 +10,17 @@
 // Out: true
 package main
 
-func Anagram(w1, w2 string) bool {
+func Solve(w1, w2 string) bool {
 	if w1 == "" || w2 == "" {
 		return false
 	}
 
 	n := len(w1)
-    runes := make([]rune, n)
-    for _, rune := range w1 {
-        n--
-        runes[n] = rune
-    }
+	runes := make([]rune, n)
+	for _, rune := range w1 {
+		n--
+		runes[n] = rune
+	}
 
 	w2Rev := string(runes[n:])
 	return w1 == w2Rev

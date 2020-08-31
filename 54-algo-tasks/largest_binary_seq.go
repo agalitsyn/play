@@ -10,14 +10,14 @@
 // 4
 package main
 
-func LargestSeq(data []int) int {
+func Solve(data []int) int {
 	if len(data) < 1 {
 		return 0
 	}
 
 	count := 1
 	prev := 0
-	for i := 0; i< len(data); i++ {
+	for i := 0; i < len(data); i++ {
 		if prev == data[i] {
 			count++
 		}

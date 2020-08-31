@@ -16,7 +16,7 @@
 //
 package main
 
-func StonesAndJewels(stones, jewels string) int {
+func Solve(stones, jewels string) int {
 	jewelsSet := make(map[rune]bool)
 	for _, j := range jewels {
 		if _, ok := jewelsSet[j]; !ok {
