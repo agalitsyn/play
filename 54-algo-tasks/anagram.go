@@ -1,4 +1,5 @@
 // Level: easy
+// Tags: strings
 //
 // Source: https://habr.com/ru/company/yandex/blog/449890/
 // https://contest.yandex.ru/contest/8458/problems/E/

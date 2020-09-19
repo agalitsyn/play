@@ -1,4 +1,5 @@
 // Level: easy
+// Tags: dynamic programming
 //
 // Source: https://leetcode.com/problems/best-time-to-buy-and-sell-stock-ii/
 //
@@ -35,5 +36,18 @@
 package main
 
 func Solve(prices []int) int {
-	return 1
+	res := 0
+	next := 0
+	for _, x := range prices {
+		res = max(res, next-x)
+		next = max(next, res+x)
+	}
+	return res
+}
+
+func max(x, y int) int {
+	if x > y {
+		return x
+	}
+	return y
 }

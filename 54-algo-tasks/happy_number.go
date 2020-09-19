@@ -30,10 +30,6 @@ func f(n int) int {
 		digit := n % 10
 		n /= 10
 		sum += digit * digit
-
-		// fmt.Println("digit", digit)
-		// fmt.Println("n", n)
-		// fmt.Println("sum", sum)
 	}
 	return sum
 }
@@ -44,10 +40,7 @@ func Solve(n int) bool {
 		if n == 1 {
 			return true
 		}
-
 		n = f(n)
-		// fmt.Println("===>", n)
-
 		if _, ok := visited[n]; ok {
 			return false
 		}

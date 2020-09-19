@@ -1,4 +1,5 @@
 // Level: easy
+// Tags: strings
 //
 // Source: interview
 //
