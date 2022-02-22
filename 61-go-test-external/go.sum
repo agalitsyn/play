@@ -1,0 +1,6 @@
+github.com/codegangsta/negroni v1.0.0 h1:+aYywywx4bnKXWvoWtRfJ91vC59NbEhEY03sZjQhbVY=
+github.com/codegangsta/negroni v1.0.0/go.mod h1:v0y3T5G7Y1UlFfyxFn/QLRU4a2EuNau2iZY63YTKWo0=
+github.com/husobee/vestigo v1.1.1 h1:bsReVP78YhmHUn/nQ4AxIEfObmWMSLGLGXP1OwgFa9s=
+github.com/husobee/vestigo v1.1.1/go.mod h1:JigD7C8lzUfpo1uzqYgefpyZLswrtJbAQxMw7ds7YCE=
+github.com/tylerb/graceful v1.2.15 h1:B0x01Y8fsJpogzZTkDg6BDi6eMf03s01lEKGdrv83oA=
+github.com/tylerb/graceful v1.2.15/go.mod h1:LPYTbOYmUTdabwRt0TGhLllQ0MUNbs0Y5q1WXJOI9II=
