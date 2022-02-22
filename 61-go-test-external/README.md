@@ -1,6 +1,6 @@
 # Go test coverage from external tests
 
-Need ability to get coverage results when testing tools are external, like curl or postman or pytest.
+Need ability to get coverage results when external testing tools like curl, postman or pytest.
 
 Trying:
 * https://husobee.github.io/golang/test/coverage/2015/11/17/external-test-coverage.html
