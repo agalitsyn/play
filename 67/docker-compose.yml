@@ -1,0 +1,7 @@
+services:
+  file:
+    image: test-file:latest
+
+  stdout:
+    image: test-stdout:latest
+
