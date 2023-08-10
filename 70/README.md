@@ -21,4 +21,4 @@ It should look like this
 	build	vcs.modified=false
 ```
 
-But it doesn't
+But it doesn't if you don't point `./...` for build target
