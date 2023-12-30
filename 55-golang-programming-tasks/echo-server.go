@@ -1,4 +1,0 @@
-// Level: Medium
-//
-// Echo server
-
